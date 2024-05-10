@@ -1,0 +1,1 @@
+Essa aplicação tem como intuito apenas facilitar a comunicação com a API da Coinbase, já que via Postman estávamos tendo dificuldades.

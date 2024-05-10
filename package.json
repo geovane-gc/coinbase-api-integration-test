@@ -1,0 +1,15 @@
+{
+  "name": "Coinbase API Test",
+  "version": "1.0.0",
+  "description": "A simple API just to test the Coinbase API integration",
+  "main": "app.js",
+  "scripts": {
+    "app": "node --env-file=.env app.js"
+  },
+  "author": "Geovane Gallotti Cazal <geovanegallotticazal@hotmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.8",
+    "crypto-js": "^4.2.0"
+  }
+}
