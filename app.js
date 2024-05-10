@@ -1,8 +1,28 @@
-const axios = require("axios");
+// native NodeJS https module
+const https = require("https");
 const CryptoJS = require("crypto-js");
 
-let now = new Date();
-let timestamp = Math.floor(now.getTime() / 1000) - 30;
+const SIGNING_KEY = process.env.SECRET_KEY;
+const ACCESS_KEY = process.env.API_KEY;
+const PASSPHRASE = process.env.PASSPHRASE;
+const REST_METHODS = {
+  GET: "GET",
+  POST: "POST",
+  PUT: "PUT",
+  DELETE: "DELETE",
+};
+const PROD_URL = "api.prime.coinbase.com";
+
+// The path of the API endpoint being called
+let requestPath = `/v1/portfolios`;
+
+// The method of the request: GET, POST, PUT, DELETE, etc
+let method = REST_METHODS.GET;
+
+const currentTimeInSecs = Math.floor(Date.now() / 1000);
+
+// Body will be JSON (POST) or empty string (GET)
+const body = "";
 
 function sign(str, secret) {
   const hash = CryptoJS.HmacSHA256(str, secret);
@@ -13,33 +33,34 @@ function buildPayload(ts, method, requestPath, body) {
   return `${ts}${method}${requestPath}${body}`;
 }
 
-const strToSign = buildPayload(
-  Math.floor(Date.now() / 1000),
-  "GET", // Alterar para o tipo de rota HTTP
-  "/v1/portfolios", // Alterar para a rota desejada
-  "" // Alterar para o corpo da requisição, caso necessário
-);
-
-const sig = sign(strToSign, `${process.env.SECRET_KEY}`);
-
-const config = {
-  method: "get", // Alterar para o tipo de rota HTTP
-  maxBodyLength: Infinity,
-  url: `${process.env.API_URL}/v1/portfolios`, // Alterar para a rota desejada
-  headers: {
-    "Content-Type": "application/json",
-    "X-CB-ACCESS-KEY": `${process.env.API_KEY}`,
-    "X-CB-ACCESS-PASSPHRASE": `${process.env.PASSPHRASE}`,
-    "X-CB-ACCESS-SIGNATURE": sig.toString(),
-    "X-CB-ACCESS-TIMESTAMP": timestamp.toString(),
-  },
+const strToSign = buildPayload(currentTimeInSecs, method, requestPath, body);
+const sig = sign(strToSign, SIGNING_KEY);
+const headers = new Map();
+headers.set("X-CB-ACCESS-KEY", ACCESS_KEY);
+headers.set("X-CB-ACCESS-PASSPHRASE", PASSPHRASE);
+headers.set("X-CB-ACCESS-SIGNATURE", sig);
+headers.set("X-CB-ACCESS-TIMESTAMP", currentTimeInSecs);
+headers.set("Content-Type", "application/json");
+const requestOptions = {
+  hostname: PROD_URL,
+  path: requestPath,
+  method: REST_METHODS.GET,
+  headers: Object.fromEntries(headers),
 };
 
-axios
-  .request(config)
-  .then((response) => {
-    console.log(JSON.stringify(response.data));
+https
+  .get(requestOptions, (res) => {
+    let data = [];
+    console.log("Status Code:", res.statusCode);
+    res.on("data", (chunk) => {
+      data.push(chunk);
+    });
+    res.on("end", () => {
+      console.log("Response ended: ");
+      const parsedResponse = JSON.parse(Buffer.concat(data).toString());
+      console.log(parsedResponse);
+    });
   })
-  .catch((error) => {
-    console.log("error ->", error.response.data.message);
+  .on("error", (err) => {
+    console.log("Error: ", err.message);
   });
